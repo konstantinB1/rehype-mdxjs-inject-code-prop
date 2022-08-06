@@ -1,0 +1,14 @@
+{
+  "include": ["src/*"],
+  "exclude": ["node_modules", "test"],
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "importHelpers": true,
+    "skipDefaultLibCheck": false,
+    "declaration": true,
+    "baseUrl": "."
+  }
+}
