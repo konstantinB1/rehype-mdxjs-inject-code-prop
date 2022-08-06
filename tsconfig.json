@@ -1,13 +1,14 @@
 {
-  "include": ["src/*"],
+  "include": ["plugin.ts"],
   "exclude": ["node_modules", "test"],
   "compilerOptions": {
     "esModuleInterop": true,
-    "module": "ESNext",
+    "module": "CommonJS",
     "moduleResolution": "Node",
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
     "importHelpers": true,
     "skipDefaultLibCheck": false,
+    "outDir": "dist",
     "declaration": true,
     "baseUrl": "."
   }

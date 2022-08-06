@@ -1,10 +1,12 @@
-import path from 'node:path';
 import fs from 'node:fs';
+import path from 'node:path';
 import prettier from 'prettier';
 import type { Element, ElementContent } from 'hast';
 import type { MdxJsxFlowElement } from 'mdast-util-mdx-jsx';
 import type { MdxjsEsm } from 'mdast-util-mdxjs-esm';
+import type { VFile } from 'vfile';
 import type { Program, ImportDeclaration } from 'estree';
+import  { sync as resolveSync } from 'resolve'
 
 export type TransformOpts = {
     /**
@@ -38,47 +40,7 @@ export type TransformOpts = {
      * Custom module resolver that will handle all the import declarations
      * inside MDX file.
      */
-    moduleResolver?: (module: string, ...args: unknown[]) => string;
-};
-
-const defaultResolver = (
-    modulePath: string,
-    { extensions = [], filePath }: TransformOpts,
-    hasExt = false
-) => {
-    const { dir } = path.parse(filePath);
-    let partialPath = path.relative(
-        modulePath,
-        dir
-    );
-
-    let found: string;
-    let fileNotFoundErr: Error;
-
-    if (hasExt) {
-        return partialPath;
-    }
-
-    for (const ext of extensions) {
-        try {
-            if (found) {
-                break;
-            }
-
-            const tryGetFile = fs.readFileSync(partialPath + ext, {
-                encoding: 'utf-8',
-            });
-            found = tryGetFile;
-        } catch (error) {
-            fileNotFoundErr = error;
-            continue;
-        }
-    }
-
-    if (fileNotFoundErr) throw fileNotFoundErr;
-    if (found) partialPath = found;
-
-    return partialPath;
+    moduleResolver?: (module: string) => string;
 };
 
 const formatCode = (code: string, parser = 'babel') =>
@@ -136,43 +98,53 @@ const findImportSpecifier = (
     }
 };
 
-const transform = (options = {} as TransformOpts) => {
+export function transform (options = {} as TransformOpts)  {
     options = {
         componentToInject: null,
         filePath: undefined,
         extensions: ['.tsx', '.js', '.json', '.ts', '.jsx', '.mdx'],
         propName: 'code',
-        moduleResolver: defaultResolver,
+        moduleResolver: undefined,
         ...options,
     };
-    const { componentToInject, moduleResolver, propName } = options;
+    const { componentToInject, extensions, moduleResolver, propName } = options;
 
     if (!componentToInject) {
         throw new Error(
             `rehype plugin error: 'componentToInject' needs to be defined`
         );
     }
-
-    return () => (ast: Element) => {
+    
+    return () => (ast: Element, file: VFile) => {
         const nodes = filterNodes(ast.children, [
             'mdxjsEsm',
             'mdxJsxFlowElement',
         ]);
-
+        
         getReplacementNodes(nodes, options, (node) => {
-            const firstChild = node?.children?.[0];
-            const resolvedModule = moduleResolver(
-                findImportSpecifier(firstChild.name, importDeclarations(nodes)),
-                options
-            );
+            // @ts-ignore
+            const firstChild = node?.children?.[0]?.name;
+            const specifier = findImportSpecifier(firstChild, importDeclarations(nodes));
+            let resolvedModule: string | undefined;
+
+            if (typeof moduleResolver === 'function' && specifier) {
+                resolvedModule = moduleResolver(specifier)
+            } else {
+                resolvedModule = resolveSync(specifier, {
+                    basedir: path.dirname(file.history?.[0]),
+                    extensions,
+                    includeCoreModules: false,
+                });
+            }
+
 
             if (resolvedModule) {
-                setAttribute(node, propName, formatCode(resolvedModule));
+                const contents = fs.readFileSync(resolvedModule, { encoding: 'utf-8'})
+                setAttribute(node, propName, formatCode(contents));
             }
         });
 
         return ast;
     };
-};
+}
 
-export default transform;
