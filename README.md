@@ -39,5 +39,5 @@ const code = compile('./src/mdxFileSource.mdx', {
 | --- | --- | --- | --- |
 | extensions | `false` | What extensions will be used when resolving source code paths. Unused if custom `moduleResolver` is used | `['.tsx', '.js', '.json', '.ts', '.jsx', '.mdx']`
 | componentToInject | `true` | Component name(s) where code will be injected | `undefined`
-| propName | `false` | Prop access inside JSX component | `code`
+| propName | `false` | Prop name for injected code | `code`
 | moduleResolver | `false` | A custom function resolver for ES modules inside MDX files. You probably don't wanna tackle this unless you need some specific module resolving logic. By default it uses browserify [resolve](https://github.com/browserify/resolve) | `resolveSync(...)`
