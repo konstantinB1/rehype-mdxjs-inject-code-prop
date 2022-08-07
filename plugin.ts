@@ -18,14 +18,6 @@ export type TransformOpts = {
     extensions?: string[];
 
     /**
-     * Filepath where all the relative/absolute file imports will 
-     * be resolved against
-     * 
-     * You can omit this if you are using custom `moduleResolver`
-     */
-    filePath?: string;
-
-    /**
      * Name(s) of components where code will be injected
      */
     componentToInject: string | RegExp | null;
@@ -101,7 +93,6 @@ const findImportSpecifier = (
 export function transform (options = {} as TransformOpts)  {
     options = {
         componentToInject: null,
-        filePath: undefined,
         extensions: ['.tsx', '.js', '.json', '.ts', '.jsx', '.mdx'],
         propName: 'code',
         moduleResolver: undefined,
@@ -125,18 +116,18 @@ export function transform (options = {} as TransformOpts)  {
             // @ts-ignore
             const firstChild = node?.children?.[0]?.name;
             const specifier = findImportSpecifier(firstChild, importDeclarations(nodes));
+            const transformedFile = file.history?.[0]
             let resolvedModule: string | undefined;
 
             if (typeof moduleResolver === 'function' && specifier) {
                 resolvedModule = moduleResolver(specifier)
             } else {
                 resolvedModule = resolveSync(specifier, {
-                    basedir: path.dirname(file.history?.[0]),
+                    basedir: path.dirname(transformedFile),
                     extensions,
                     includeCoreModules: false,
                 });
             }
-
 
             if (resolvedModule) {
                 const contents = fs.readFileSync(resolvedModule, { encoding: 'utf-8'})
